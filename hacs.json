@@ -1,0 +1,7 @@
+{
+  "name": "NHL Playoffs Dashboard",
+  "content_in_root": false,
+  "domains": ["nhl_playoffs"],
+  "homeassistant": "2024.1.0",
+  "render_readme": true
+}
