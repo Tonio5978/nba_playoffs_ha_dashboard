@@ -1,0 +1,23 @@
+{
+  "title": "NBA Playoffs",
+  "config": {
+    "step": {
+      "user": {
+        "title": "NBA Playoffs",
+        "description": "Set up the NBA Playoffs integration."
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "NBA Playoffs Options",
+        "description": "Configure the NBA Playoffs integration.",
+        "data": {
+          "season_mode": "Season mode",
+          "manual_season": "Manual season year (e.g. 2025)"
+        }
+      }
+    }
+  }
+}

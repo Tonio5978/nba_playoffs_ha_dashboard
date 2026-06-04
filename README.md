@@ -1,76 +1,33 @@
-# 🏒 NHL Playoffs Dashboard  
-Home Assistant custom integration and Lovelace dashboard for NHL Stanley Cup Playoff tracking — now fully rebuilt with live game overlays, new sensors, and a modern bracket layout.
-
----
-
-> ## 🆕 What’s New in v2.3.0
-> Major update released!  
-> - New live game overlay (PP, EN, score, period, time remaining)  
-> - New sensor naming format (`sensor.nhl_series_*`, `sensor.nhl_live_*`)  
-> - New season banner + conference bars  
-> - Dashboard fully rebuilt and optimized  
-> - `layout-card` no longer required  
->
-> 📌 **Important:** You must delete the old integration + old dashboard YAML before installing this update.  
->
-> 👉 Full update notes: [`README-UPDATE.md`](README-UPDATE.md)
+# 🏀 NBA Playoffs Dashboard
+Home Assistant custom integration and Lovelace dashboard for NBA Playoffs tracking — with live game overlays, real-time scores, and a modern bracket layout.
 
 ---
 
 # 📦 Repository Contents
 
-- `custom_components/nhl_playoffs/` — Home Assistant integration  
-- `lovelace/nhl_playoffs_dashboard.yaml` — Updated Lovelace dashboard  
-- `www/nhl/` — Local images folder (includes `tbd.png`)  
-- `images/` — Screenshots for documentation  
-- `hacs.json` — HACS metadata  
+- `custom_components/nba_playoffs/` — Home Assistant integration
+- `custom_components/nhl_playoffs/` — Original NHL integration (kept for reference)
+- `lovelace/nba_playoffs_dashboard.yaml` — NBA Lovelace dashboard
+- `lovelace/nhl_playoffs_dashboard.yaml` — Original NHL dashboard
+- `hacs.json` — HACS metadata
 
 ---
 
 # ⚙️ Installation
 
 ## 🔧 Manual Install
-1. Copy `custom_components/nhl_playoffs/` into:
+1. Copy `custom_components/nba_playoffs/` into:
    ```
    config/custom_components/
    ```
 2. Restart Home Assistant.
-3. Install required Lovelace custom card:
-   - `button-card`  
-4. Add the **NHL Playoffs** integration in Home Assistant.
-5. Use the updated dashboard YAML in:
+3. Install required Lovelace custom card via HACS:
+   - `button-card`
+4. Add the **NBA Playoffs** integration in **Settings → Devices & Services → Add Integration**.
+5. Paste the dashboard YAML from:
    ```
-   lovelace/nhl_playoffs_dashboard.yaml
+   lovelace/nba_playoffs_dashboard.yaml
    ```
-
-## 🧩 HACS Install
-1. In HACS → Integrations → Custom Repositories  
-2. Add:
-   ```
-   https://github.com/astlgit/nhl_playoffs_ha_dashboard
-   ```
-3. Install **NHL Playoffs Dashboard**  
-4. Install `button-card` (layout-card no longer required)  
-5. Restart Home Assistant  
-
----
-
-# 🖼️ Screenshots
-
-### Live Game — Power Play Active  
-
-### Live Game — Empty Net + Score + Period + Time Remaining  
-![Live Card](images/Live_Preview_Card.png)
-
-### Partial Season View (2026) (UPDATED) 
-![Partial Season 2026](images/New_Bracket_2026.png)
-
-### Integration Setup  
-![Integration API](images/Intergration%20api.png)
-
-### Full Season View (2024)  
-![Full Season 2024](images/Full%20Season%202024.png)
-
 
 ---
 
@@ -78,143 +35,194 @@ Home Assistant custom integration and Lovelace dashboard for NHL Stanley Cup Pla
 
 After installation:
 
-1. Go to **Settings → Devices & Services → Integrations**  
-2. Add **NHL Playoffs**  
-3. Select your season (auto or manual)  
-4. Integration creates:
-   - Series sensors  
-   - Live game sensors  
-   - Season metadata  
+1. Go to **Settings → Devices & Services → Integrations**
+2. Search for and add **NBA Playoffs**
+3. Select your season mode:
+   - **Current season** — auto-detects the year from today's date
+   - **Manual season** — enter a year (e.g. `2025`) to test with historical data
+4. The integration creates 30 sensors:
+   - 15 series sensors (`sensor.nba_series_*`)
+   - 15 live sensors (`sensor.nba_live_*`)
+
+### 🔍 Test with Historical Data
+
+To test without waiting for the next playoffs: choose **Manual season** mode and enter `2025` — this uses the 2025 playoffs data from the ESPN API.
 
 ---
 
-# 📡 Sensor Naming (Updated)
+# 📡 Sensor Naming
 
-## Series Sensors  
+## Series Sensors
 ```
-sensor.nhl_series_r1_east_1
-sensor.nhl_series_r1_west_1
-sensor.nhl_series_r2_east_1
-sensor.nhl_series_r2_west_1
-sensor.nhl_series_r3_east
-sensor.nhl_series_r3_west
-sensor.nhl_series_r4_final
-```
-
-## Live Game Sensors  
-```
-sensor.nhl_live_r1_east_1
-sensor.nhl_live_r1_west_1
-sensor.nhl_live_r2_east_1
-sensor.nhl_live_r2_west_1
-sensor.nhl_live_r3_east
-sensor.nhl_live_r3_west
-sensor.nhl_live_r4_final
+sensor.nba_series_r1_east_1    # (1) vs (8) Eastern
+sensor.nba_series_r1_east_2    # (2) vs (7) Eastern
+sensor.nba_series_r1_east_3    # (3) vs (6) Eastern
+sensor.nba_series_r1_east_4    # (4) vs (5) Eastern
+sensor.nba_series_r1_west_1    # (1) vs (8) Western
+sensor.nba_series_r1_west_2    # (2) vs (7) Western
+sensor.nba_series_r1_west_3    # (3) vs (6) Western
+sensor.nba_series_r1_west_4    # (4) vs (5) Western
+sensor.nba_series_r2_east_1    # Conference Semifinals Eastern
+sensor.nba_series_r2_east_2
+sensor.nba_series_r2_west_1    # Conference Semifinals Western
+sensor.nba_series_r2_west_2
+sensor.nba_series_r3_east_cf   # Conference Finals Eastern
+sensor.nba_series_r3_west_cf   # Conference Finals Western
+sensor.nba_series_r4_final     # NBA Finals
 ```
 
-## Live Attributes  
-- `home_team`, `away_team`  
-- `home_score`, `away_score`  
-- `live_period`  
-- `live_time_remaining`  
-- `live_intermission`  
-- `live_pp_team`  
-- `live_empty_net_team`  
-- `game_state`  
+## Live Sensors
+```
+sensor.nba_live_r1_east_1
+sensor.nba_live_r1_east_2
+...
+sensor.nba_live_r4_final
+```
+
+## Series Sensor Attributes
+| Attribute | Description |
+|-----------|-------------|
+| `team1_abbrev` | Top-seed team abbreviation |
+| `team1_name` | Full team name |
+| `team1_logo` | ESPN CDN logo URL |
+| `team1_seed` | Playoff seed number |
+| `team1_wins` | Wins in the series |
+| `team2_abbrev` | Bottom-seed team abbreviation |
+| `team2_name` | Full team name |
+| `team2_logo` | ESPN CDN logo URL |
+| `team2_seed` | Playoff seed number |
+| `team2_wins` | Wins in the series |
+| `series_status` | e.g. `"BOS leads 2-1"` |
+| `series_complete` | `true` once a team reaches 4 wins |
+| `games_list` | List of all games in the series |
+| `next_game_time` | ISO timestamp of next scheduled game |
+| `today_game_id` | ESPN event ID of today's game |
+
+## Live Sensor Attributes
+| Attribute | Description |
+|-----------|-------------|
+| `game_state` | `pre` / `in` / `post` |
+| `home_team` / `away_team` | Full team name |
+| `home_abbr` / `away_abbr` | Team abbreviation |
+| `home_score` / `away_score` | Current score |
+| `quarter` | Current period number (1–4, 5=OT…) |
+| `quarter_display` | `Q1`–`Q4`, `OT`, `2OT`… |
+| `time_remaining` | Clock display, e.g. `"5:23"` |
+| `venue` | Arena name |
+| `broadcasts` | List of broadcast networks |
+| `start_time` | ISO timestamp of tip-off |
 
 ---
 
 # 🖥️ Dashboard Installation
 
 ## Prerequisites
-Before adding the dashboard, ensure:
-- `button-card` is installed  
-- `config/www/nhl/tbd.png` exists  
-- The NHL Playoffs integration is configured  
+- `button-card` installed via HACS
+- NBA Playoffs integration configured
 
-## Method 1: YAML Mode (Legacy)
-If using YAML mode:
+## Method 1: UI Dashboard Editor (Recommended)
+1. Create a new dashboard in **Settings → Dashboards**
+2. Open **Raw Configuration Editor**
+3. Paste the contents of `lovelace/nba_playoffs_dashboard.yaml`
+4. Save and exit.
 
-1. Enable YAML mode:
+## Method 2: YAML Mode
+1. Enable YAML mode in `configuration.yaml`:
    ```yaml
    lovelace:
      mode: yaml
    ```
 2. Add the dashboard YAML to your Lovelace config.
-3. Remove `panel: true` if adding to an existing view.
-4. Restart Home Assistant.
-
-## Method 2: UI Dashboard Editor (Recommended)
-1. Create a new dashboard in **Settings → Dashboards**  
-2. Open **Raw Configuration Editor**  
-3. Paste the contents of:
-   ```
-   lovelace/nhl_playoffs_dashboard.yaml
-   ```
-4. Save and exit.
+3. Restart Home Assistant.
 
 ---
 
-# 🧱 Dashboard Layout (Updated)
+# 🧱 Dashboard Layout
 
-The dashboard uses a **5‑column bracket layout**:
+The dashboard uses a **5-column bracket layout**:
 
-- Columns 1–2 → Western Conference  
-- Column 3 → Conference Finals  
-- Columns 4–5 → Eastern Conference  
+- Column 1 → Western Conference Round 1
+- Column 2 → Western Conference Semifinals + Conference Finals
+- Column 3 → NBA Finals (center)
+- Column 4 → Eastern Conference Semifinals + Conference Finals
+- Column 5 → Eastern Conference Round 1
 
-At the top:
-- ~~Season banner~~  
-- Western Conference bar  
-- Eastern Conference bar  
+Each series card:
+- Shows team logos, seed numbers, team names, series wins
+- Rotates between series status and next game time
+- **Switches automatically to a live overlay** when a game is in progress (score, quarter, clock)
 
-Each series card includes:
-- Team logos  
-- Team names  
-- Series wins  
-- Game list  
-- **Live game overlay**  
-
----
-
-# 🛠 Development Notes
-
-### Mapping  
-`mapping_bracket.py` maps:
-- Series letters A–O  
-- Rounds  
-- Conferences  
-- Finals  
-
-### Coordinators  
-- `series_coordinator.py` → static series data  
-- `live_coordinator.py` → real‑time game updates  
-
-### Assets  
-Team logos + banners pulled from NHL CDN.
+### Live Card States
+- `pre` → Shows tip-off time
+- `in` → Shows live score, quarter, and time remaining
+- `post` → Shows final score
 
 ---
 
-# 🚧 Future Improvements
+# 🛠 Architecture Notes
 
-### Planned Features
-- Dynamic Finals banner  
-- Conference shield logos  
-- Compact layout option  
-- Game Center modal  
-- Multi‑season selector  
-- Automatic dark/light mode  
+### API Source
+Data comes from the **ESPN NBA public API** (no API key required):
+```
+https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard
+```
+
+### Series Detection
+The integration fetches all playoff games for the season's date range, groups them by team matchup, then assigns each series to a bracket slot using seed numbers. Conference is determined from a built-in team→conference mapping.
+
+### Coordinators
+- `series_coordinator.py` → polls every 5 minutes for series-level data (wins, schedule, team info)
+- `live_coordinator.py` → per-series adaptive polling: 10s live, 30s pre-game, up to 30min idle
+
+### Polling Intervals
+| Game State | Interval |
+|------------|----------|
+| Live (`in`) | 10 seconds |
+| Pre-game < 30 min | 30 seconds |
+| Pre-game < 2 hours | 5 minutes |
+| Pre-game > 2 hours | 30 minutes |
+| Post-game / no game | 1 hour |
 
 ---
 
-# 📜 License  
-MIT License — see full text below.
+# 🔍 Debug & Troubleshooting
 
-This project is licensed under the **MIT License**. See the terms below:
+### Enable Debug Logging
+Add to `configuration.yaml`:
+```yaml
+logger:
+  default: warning
+  logs:
+    custom_components.nba_playoffs: debug
+```
+
+### Common Issues
+| Problem | Solution |
+|---------|----------|
+| Sensors show "TBD" | Playoffs haven't started yet, or try Manual season `2025` |
+| Logos not loading | ESPN CDN URLs — check your HA instance can reach the internet |
+| Series in wrong bracket slot | Seeds may be unavailable; series fall back to alphabetical ordering |
+| Integration not found | Verify the folder is `custom_components/nba_playoffs/` and restart HA |
+
+---
+
+# 🔄 Differences: NHL vs NBA
+
+| Aspect | NHL | NBA |
+|--------|-----|-----|
+| API | `api-web.nhle.com` | `site.api.espn.com` |
+| Game periods | 3 periods + OT | 4 quarters + OT |
+| Game states | `LIVE`, `PRE`, `FINAL`, `OFF` | `in`, `pre`, `post` |
+| Series mapping | Explicit letters (A–O) from API | Inferred from team matchups |
+| Live interval | 5 seconds | 10 seconds |
+
+---
+
+# 📜 License
+MIT License
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
 The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-

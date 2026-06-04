@@ -1,115 +1,100 @@
-# 🏒 NHL Playoffs Dashboard — Update Notes  
-A summary of the newest enhancements added to the NHL Playoffs Home Assistant Dashboard.  
-For full installation instructions and complete feature documentation, see the main README:
+# 🏀 NBA Playoffs Dashboard — Notes de développement
 
-👉 https://github.com/astlgit/nhl_playoffs_ha_dashboard/blob/main/README.md
+Ce document décrit les décisions d'architecture et les adaptations effectuées pour créer l'intégration NBA à partir du projet NHL d'origine.
 
----
-
-## 🚨 Live Game Overlay System (New!)  
-The dashboard now includes a fully dynamic **live game status bar** inside each series card.  
-This brings real‑time, broadcast‑style information directly into the bracket.
-
-### 🔥 Live Game Enhancements  
-- **Power Play Indicator (PP Triangle)**  
-  Displays automatically when a team is on the power play.
-
-- **Empty Net Indicator (EN)**  
-  Appears when a team pulls their goalie.
-
-- **Live Score Display**  
-  Home and away scores update in real time.
-
-- **Period Tracking**  
-  Shows 1st, 2nd, 3rd, OT, 2OT, etc.
-
-- **Time Remaining**  
-  Displays the time left in the current period.  
-  Shows **INT** during intermission.
-
-- **Compact, Broadcast‑Style Layout**  
-  Fits cleanly inside each series card without breaking the bracket.
+Pour l'installation et la documentation complète, voir le README principal :
+👉 [README.md](README.md)
 
 ---
 
-## 🖼️ New Screenshots  
-Two new images have been added to the repository to showcase the live game overlay:
+## 🔄 Origine du projet
 
-1. **Live Game — Power Play Active (PP Triangle)**
-2. **Live Game — Green = Team on PP, Yellow = 4 players, Red = 3 Players**
-3. **Live Game — Empty Net + Score + Period + Time Remaining**
-
-![Live Preview Card](images/Live_Preview_Card.png)
-
-These demonstrate the new real‑time interface in action.
+Ce projet est une adaptation de [nhl_playoffs_ha_dashboard](https://github.com/astlgit/nhl_playoffs_ha_dashboard).  
+L'architecture (coordinateurs, sensors, dashboard Lovelace) est identique ; seuls l'API source, le parsing des données, et quelques détails de logique métier ont changé.
 
 ---
 
-## 🟦 Conference Title Bars (New!)  
-The dashboard now includes bold, themed conference headers:
+## 🆕 Nouveautés — Intégration NBA (v1.0)
 
-### Western Conference  
-- Deep navy gradient  
-- Blue accent border  
-- Strong uppercase typography  
+### Intégration Home Assistant (`custom_components/nba_playoffs/`)
 
-### Eastern Conference  
-- Deep red gradient  
-- Red accent border  
-- Matching typography  
+- **API ESPN** — remplace l'API NHL. Un seul endpoint retourne tous les matchs playoffs.
+- **Détection automatique des séries** — les séries sont reconstruites dynamiquement en groupant les matchs par paire d'équipes, puis assignées aux slots du bracket par numéro de tête de série.
+- **Quarters NBA** — affichage Q1–Q4, OT, 2OT au lieu des périodes NHL.
+- **États ESPN** — `pre` / `in` / `post` remplacent `FUT` / `LIVE` / `FINAL` / `OFF`.
+- **Intervals adaptatifs** — 10 s en direct, 30 s pré-match, 5 min / 30 min hors match.
+- **Saison par année** — la config utilise un entier (`2025`, `2026`) au lieu du format `20232024`.
 
-These headers visually separate the two sides of the bracket and align with NHL branding.
+### Dashboard Lovelace (`lovelace/nba_playoffs_dashboard.yaml`)
 
----
-
-## 🧩 Integration Enhancements  
-Several backend improvements were made to support the new live overlay system:
-
-### New Live Sensor Attributes  
-- `live_period`  
-- `live_time_remaining`  
-- `live_intermission`  
-- `live_pp_team`  
-- `live_empty_net_team`  
-- `home_score`  
-- `away_score`  
-- `game_state`  
-
-### Coordinator Updates  
-- `live_coordinator.py` now processes real‑time NHL API data.  
-- `series_coordinator.py` updated for improved bracket mapping.  
-
-### Mapping Updates  
-`mapping_bracket.py` now includes updated round and series logic for all playoff rounds.
+- Même layout 5 colonnes que le dashboard NHL.
+- Couleurs NBA : bleu Lakers/Clippers (Western), rouge Bulls/Heat (Eastern), or (NBA Finals).
+- Live card adapté aux quarters : affiche `Q3 · 5:23` au lieu de `2nd · 5:23`.
+- Plus d'indicateurs PP/EN (hockey uniquement).
+- Bascule automatique entre `nba_series_card` et `nba_live_card` selon l'état du sensor.
 
 ---
 
-## 🎨 Dashboard Layout Improvements  
-The dashboard now includes:
+## 🏗 Différences architecturales clés
 
-- Western & Eastern conference title bars  
-- Updated series cards  
-- Live game overlays  
-- Cleaner spacing  
-- Improved readability  
+### Récupération des données
 
-These changes make the dashboard feel more like a real NHL broadcast.
+| Aspect | NHL | NBA |
+|--------|-----|-----|
+| Endpoint bracket | `api-web.nhle.com/v1/playoff-bracket/{year}` | — |
+| Endpoint série | `api-web.nhle.com/v1/schedule/playoff-series/{season}/{letter}` | — |
+| Endpoint scoreboard | `api-web.nhle.com/v1/schedule/now` | `site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=...` |
+| Lettres de série | Fournies explicitement par l'API (A–O) | Déduites du matchup d'équipes |
 
-![New Bracket Screenshot](images/New_Bracket_2026.png)
+### Détection des séries (NBA)
+
+L'API ESPN ne fournit pas de structure bracket explicite. La `SeriesCoordinator` :
+
+1. Récupère tous les matchs playoffs de la fenêtre de dates (`YYYYMMDD-YYYYMMDD`)
+2. Groupe les matchs par paire d'équipes (`frozenset` d'abréviations)
+3. Extrait le round depuis le champ `series.title` (`"First Round"`, `"Conference Semifinals"`, …)
+4. Détermine la conférence via un mapping statique `abbrev → Eastern/Western`
+5. Trie les séries dans un round/conférence par numéro de tête de série (`curatedRank.current`)
+6. Assigne les clés de bracket (`r1_east_1`, `r1_east_2`, …) dans cet ordre
+
+### Données live (NBA)
+
+ESPN n'expose pas d'endpoint single-game live public. La `LiveCoordinator` refetch le scoreboard du jour et filtre par `game_id`. Cela garantit un format de réponse identique à celui que parse la `SeriesCoordinator`.
 
 ---
 
-## 📌 Next Planned Updates  
-- Dynamic Finals banner  
-- Conference shield logos  
-- Optional compact layout  
-- Game Center modal  
-- Multi‑season selector  
-- Automatic dark/light mode  
+## 📡 Sensors créés
+
+### Series Sensors (15)
+```
+sensor.nba_series_r1_east_1 … sensor.nba_series_r4_final
+```
+État = `series_status` (ex. `"BOS leads 2-1"`).
+
+### Live Sensors (15)
+```
+sensor.nba_live_r1_east_1 … sensor.nba_live_r4_final
+```
+État = `normal` / `live` / `final` / `pre`.
 
 ---
 
-## 🙌 Thank You  
-These updates bring the dashboard closer to a true NHL broadcast experience.  
-Thank you for using and supporting the NHL Playoffs Dashboard!
+## 🔧 Debug
 
+```yaml
+# configuration.yaml
+logger:
+  default: warning
+  logs:
+    custom_components.nba_playoffs: debug
+```
+
+---
+
+## 📌 Améliorations futures
+
+- Bracket endpoint ESPN dédié (si disponible publiquement) pour éviter l'inférence des séries
+- Stats par joueur (points, rebonds, passes)
+- Notification automatique sur changement de score
+- Vue compacte mobile
+- Sélecteur multi-saison dans le dashboard

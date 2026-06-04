@@ -1,0 +1,14 @@
+{
+  "domain": "nba_playoffs",
+  "name": "NBA Playoffs Dashboard Integration",
+  "version": "1.0.0",
+  "documentation": "https://github.com/Tonio5978/nba_playoffs_ha_dashboard",
+  "requirements": ["aiohttp>=3.9.0"],
+  "dependencies": [],
+  "codeowners": ["@Tonio5978"],
+  "config_flow": true,
+  "iot_class": "cloud_polling",
+  "loggers": ["custom_components.nba_playoffs"],
+  "integration_type": "hub",
+  "platforms": ["sensor"]
+}
