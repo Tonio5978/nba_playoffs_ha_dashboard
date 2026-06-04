@@ -26,15 +26,21 @@ async def fetch_scoreboard(
     """Fetch all NBA playoff events in a date range.
 
     start_date / end_date must be 'YYYYMMDD' strings.
-    Returns the ESPN 'events' list (may be empty outside playoffs).
+    seasontype=3 is required — without it ESPN returns regular season games.
     """
     params = {
         "limit": 200,
         "dates": f"{start_date}-{end_date}",
+        "seasontype": "3",  # 3 = post-season / playoffs
     }
     try:
         data = await _fetch_json(session, API_SCOREBOARD, params=params)
-        return data.get("events", [])
+        events = data.get("events", [])
+        LOGGER.debug(
+            "fetch_scoreboard: %d events returned for %s–%s",
+            len(events), start_date, end_date,
+        )
+        return events
     except Exception as err:
         LOGGER.error("fetch_scoreboard failed (%s–%s): %s", start_date, end_date, err)
         return []

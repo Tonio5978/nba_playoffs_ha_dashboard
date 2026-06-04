@@ -62,17 +62,25 @@ ROUND_NAME_MAP = {
 # NBA team abbreviation → conference (stable mapping)
 # ---------------------------------------------------------------------------
 TEAM_CONFERENCES = {
-    # Eastern Conference
+    # Eastern Conference — standard abbreviations
     "ATL": "Eastern", "BOS": "Eastern", "BKN": "Eastern", "CHA": "Eastern",
     "CHI": "Eastern", "CLE": "Eastern", "DET": "Eastern", "IND": "Eastern",
     "MIA": "Eastern", "MIL": "Eastern", "NYK": "Eastern", "ORL": "Eastern",
     "PHI": "Eastern", "TOR": "Eastern", "WAS": "Eastern",
-    # Western Conference
+    # Western Conference — standard abbreviations
     "DAL": "Western", "DEN": "Western", "GSW": "Western", "HOU": "Western",
     "LAC": "Western", "LAL": "Western", "MEM": "Western", "MIN": "Western",
     "NOP": "Western", "OKC": "Western", "PHX": "Western", "POR": "Western",
     "SAC": "Western", "SAS": "Western", "UTA": "Western",
-    # Alternative abbreviations used by ESPN
-    "GS":  "Western", "NO":  "Western", "NY":  "Eastern", "SA":  "Western",
-    "BK":  "Eastern",
+    # ESPN short abbreviations (observed in API responses)
+    "GS":  "Western",  # Golden State Warriors
+    "NO":  "Western",  # New Orleans Pelicans
+    "NY":  "Eastern",  # New York Knicks
+    "SA":  "Western",  # San Antonio Spurs
+    "BK":  "Eastern",  # Brooklyn Nets
+    "CHA": "Eastern",  # Charlotte Hornets (duplicate, already above)
+    "WSH": "Eastern",  # Washington Wizards (alternate)
+    "NOR": "Western",  # New Orleans (alternate)
+    "PHO": "Western",  # Phoenix Suns (alternate)
+    "UTA": "Western",  # Utah Jazz (already above)
 }

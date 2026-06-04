@@ -67,15 +67,38 @@ class SeriesCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
             events = await fetch_scoreboard(session, start_date, end_date)
 
-            # Filter to playoff games only (season type 3 = post-season)
+            LOGGER.warning(
+                "NBA SeriesCoordinator: %d raw events received for year=%d (dates %s–%s)",
+                len(events), year, start_date, end_date,
+            )
+
+            if events:
+                # Log first event structure to help diagnose season.type format
+                first = events[0]
+                LOGGER.warning(
+                    "NBA first event sample: id=%s season=%s name=%s",
+                    first.get("id"), first.get("season"), first.get("name"),
+                )
+
+            # Filter to playoff games only (season.type == 3).
+            # ESPN may return the type as int 3 or string "3" — accept both.
             playoff_events = [
                 e for e in events
-                if e.get("season", {}).get("type") == 3
+                if str(e.get("season", {}).get("type", "")) == "3"
             ]
 
-            LOGGER.debug("SeriesCoordinator: fetched %d playoff events for %d", len(playoff_events), year)
+            LOGGER.warning(
+                "NBA SeriesCoordinator: %d playoff events after type-3 filter",
+                len(playoff_events),
+            )
 
             series_by_key = self._build_series_from_events(playoff_events)
+
+            LOGGER.warning(
+                "NBA SeriesCoordinator: %d series detected → keys: %s",
+                len(series_by_key), list(series_by_key.keys()),
+            )
+
             return self._build_data(series_by_key)
 
         except Exception as err:
@@ -105,43 +128,129 @@ class SeriesCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             pair = frozenset({home_abbr, away_abbr})
             raw_series.setdefault(pair, []).append(event)
 
-        # Step 2 — extract metadata for each series
+        LOGGER.warning("NBA _build_series: %d unique matchups found", len(raw_series))
+
+        # Step 2 — infer round numbers from bracket structure.
+        # ESPN does not include series.title in the scoreboard response, so we
+        # deduce the round by counting how many series each team appears in:
+        # a team that wins R1 appears in 2 series, R2 winner in 3, Finals in 4.
+        # The round of a matchup = min(appearances of team A, appearances of team B).
+        round_map = self._infer_rounds_from_bracket(raw_series)
+        LOGGER.warning(
+            "NBA _build_series: inferred rounds = %s",
+            {str(sorted(k)): v for k, v in round_map.items()},
+        )
+
+        # Step 3 — extract metadata for each series
         series_list: list[dict] = []
         for pair, games in raw_series.items():
-            info = self._extract_series_info(pair, games)
+            inferred_round = round_map.get(pair, 0)
+            info = self._extract_series_info(pair, games, inferred_round)
             if info:
                 series_list.append(info)
+            else:
+                LOGGER.warning(
+                    "NBA _build_series: matchup %s skipped (round=%s)",
+                    sorted(pair), inferred_round,
+                )
 
-        # Step 3 — assign bracket keys
+        # Step 4 — assign bracket keys
         return self._assign_bracket_keys(series_list)
 
-    def _extract_series_info(self, pair: frozenset, games: list[dict]) -> dict | None:
+    # -------------------------------------------------------------------------
+    # Bracket-based round inference
+    # -------------------------------------------------------------------------
+    @staticmethod
+    def _infer_rounds_from_bracket(
+        raw_series: dict[frozenset, list],
+    ) -> dict[frozenset, int]:
+        """Deduce each series' round from how many series each team has played.
+
+        In a 16-team single-elimination bracket every team that wins round N
+        appears in one additional series.  The round of a matchup between A
+        and B equals min(total series count of A, total series count of B).
+
+        Examples (2026 playoffs from logs):
+          TOR  → 1 series   (lost R1)
+          DET  → 2 series   (lost R2)
+          OKC  → 3 series   (lost R3)
+          NY   → 4 series   (Finals)
+          DEN-MIN: min(count(DEN)=1, count(MIN)=2) = 1  → Round 1  ✓
+          MIN-SA:  min(count(MIN)=2, count(SA)=4)  = 2  → Round 2  ✓
+          OKC-SA:  min(count(OKC)=3, count(SA)=4)  = 3  → Round 3  ✓
+          NY-SA:   min(count(NY)=4,  count(SA)=4)  = 4  → Round 4  ✓
+        """
+        # Count the number of series each team participates in
+        team_count: dict[str, int] = {}
+        for pair in raw_series:
+            for team in pair:
+                team_count[team] = team_count.get(team, 0) + 1
+
+        round_map: dict[frozenset, int] = {}
+        for pair in raw_series:
+            teams = list(pair)
+            round_map[pair] = min(
+                team_count.get(teams[0], 1),
+                team_count.get(teams[1], 1),
+            )
+        return round_map
+
+    @staticmethod
+    def _detect_round_from_event(event: dict) -> int:
+        """Try to read round number from ESPN event metadata fields.
+
+        ESPN sometimes includes round info in:
+          - event.notes[].type.text
+          - competitions[].notes[].headline
+          - competitors[].series.title
+        Returns 0 if nothing is found.
+        """
+        # 1. Event-level notes
+        for note in event.get("notes") or []:
+            text = (
+                (note.get("type") or {}).get("text", "")
+                or note.get("headline", "")
+            ).lower()
+            for name, num in ROUND_NAME_MAP.items():
+                if name in text:
+                    return num
+
+        # 2. Competition-level notes
+        comp = (event.get("competitions") or [{}])[0]
+        for note in comp.get("notes") or []:
+            text = (note.get("headline") or (note.get("type") or {}).get("text", "")).lower()
+            for name, num in ROUND_NAME_MAP.items():
+                if name in text:
+                    return num
+
+        # 3. competitors[].series.title
+        for c in comp.get("competitors") or []:
+            title = ((c.get("series") or {}).get("title") or "").lower()
+            for name, num in ROUND_NAME_MAP.items():
+                if name in title:
+                    return num
+
+        return 0
+
+    def _extract_series_info(
+        self, pair: frozenset, games: list[dict], inferred_round: int = 0
+    ) -> dict | None:
         """Build a structured series dict from a group of games with the same matchup."""
         teams = list(pair)
         if len(teams) != 2:
             return None
 
-        # Use the game with the most series info (latest completed or any live)
-        ref_game = max(
-            games,
-            key=lambda e: (
-                e.get("season", {}).get("type", 0),
-                e.get("date", ""),
-            ),
-        )
+        # Use the latest game as reference for team metadata
+        ref_game = max(games, key=lambda e: e.get("date", ""))
         ref_comp = (ref_game.get("competitions") or [{}])[0]
         ref_competitors = ref_comp.get("competitors", [])
 
-        # Determine round from series title embedded in any competitor
-        round_num = 0
-        for comp in ref_competitors:
-            title = (comp.get("series") or {}).get("title", "").lower()
-            for name, num in ROUND_NAME_MAP.items():
-                if name in title:
-                    round_num = num
-                    break
-            if round_num:
-                break
+        # Try to get round from ESPN series/notes fields first (future-proof)
+        round_num = self._detect_round_from_event(ref_game)
+
+        # Fall back to bracket inference (primary path when ESPN omits series data)
+        if not round_num:
+            round_num = inferred_round
 
         if not round_num:
             return None
